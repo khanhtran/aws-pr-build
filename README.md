@@ -1,0 +1,3 @@
+- a codebuild project that kick off itself
+- merge master to current branch
+- build the merged version
