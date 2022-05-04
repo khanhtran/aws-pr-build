@@ -1,7 +1,6 @@
 import { App, Stack, Construct, StackProps } from "@aws-cdk/core";
-import { Repository } from "@aws-cdk/aws-codecommit";
+import { IRepository, Repository } from "@aws-cdk/aws-codecommit";
 import { ServicePrincipal, Effect, ManagedPolicy, PolicyDocument, PolicyStatement, Role } from "@aws-cdk/aws-iam";
-import { Repository as EcrRepository } from "@aws-cdk/aws-ecr";
 import { IProject, Project, Source, BuildSpec, LinuxBuildImage } from "@aws-cdk/aws-codebuild"
 import { RuleTargetInput, EventField } from "@aws-cdk/aws-events";
 import * as events from '@aws-cdk/aws-events'
@@ -10,18 +9,19 @@ import * as targets from '@aws-cdk/aws-events-targets'
 export class AwsPrBuildStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
-
+    const repo: IRepository = Repository.fromRepositoryName(this, "sample-repo", "sample");
     new events.Rule(this, `pr-create`, {
       ruleName: 'pr-created',
       eventPattern: {
         source: ['aws.codecommit'],
         detailType: ['CodeCommit Pull Request State Change'],
+        resources: [repo.repositoryArn],
         detail: {
           event: ['pullRequestCreated', 'pullRequestSourceBranchUpdated'],
           pullRequestStatus: ['Open']
         },
       },
-      targets: [new targets.CodeBuildProject(this.newProject(), {
+      targets: [new targets.CodeBuildProject(this.newProject(repo), {
         event: events.RuleTargetInput.fromObject({
           sourceVersion: EventField.fromPath('$.detail.sourceReference')
         })
@@ -29,8 +29,8 @@ export class AwsPrBuildStack extends Stack {
     })
   }
 
-  private newProject(): IProject {
-    const repo = Repository.fromRepositoryName(this, "sample-repo", "sample");
+  private newProject(repo: IRepository): IProject {
+    
 
     return new Project(this, "pull-request-build", {
       source: Source.codeCommit({ repository: repo }),
