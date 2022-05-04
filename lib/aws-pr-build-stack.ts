@@ -46,6 +46,9 @@ export class AwsPrBuildStack extends Stack {
               'echo ${CODEBUILD_SOURCE_VERSION}',
               'BRANCH_NAME=${CODEBUILD_SOURCE_VERSION##*/}',
               'echo ${BRANCH_NAME}',
+              'git config --global user.email "kxt1979@hotmail.com"',
+              'git config --global user.name "Khanh Tran"',
+              'git merge origin/master',
               'ls -la'
             ]
           }
