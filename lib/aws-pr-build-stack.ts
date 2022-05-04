@@ -11,41 +11,30 @@ export class AwsPrBuildStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
-
     new events.Rule(this, `pr-create`, {
+      ruleName: 'pr-created',
       eventPattern: {
         source: ['aws.codecommit'],
         detailType: ['CodeCommit Pull Request State Change'],
-        resources: ['arn:aws:codecommit:us-east-2:657641750194:sample'],
         detail: {
           event: ['pullRequestCreated', 'pullRequestSourceBranchUpdated'],
-          pullRequestStatus: "Open"
+          pullRequestStatus: ['Open']
         },
       },
       targets: [new targets.CodeBuildProject(this.newProject(), {
         event: events.RuleTargetInput.fromObject({
-          sourceVersion: EventField.fromPath('$.detail.sourceReference'),
-          environmentVariablesOverride: [{
-            'name': 'BRANCH_NAME',
-            'value': EventField.fromPath('$.detail.sourceReference'),
-            'type': 'PLAINTEXT'
-          }]
+          sourceVersion: EventField.fromPath('$.detail.sourceReference')
         })
       })]
     })
-
-
   }
 
   private newProject(): IProject {
-    const repo = Repository.fromRepositoryName(
-      this,
-      "repo",
-      "sample-repo"
-    );
+    const repo = Repository.fromRepositoryName(this, "sample-repo", "sample");
 
     return new Project(this, "pull-request-build", {
       source: Source.codeCommit({ repository: repo }),
+      projectName: 'pull-request',
       environment: {
         buildImage: LinuxBuildImage.STANDARD_5_0
       },
@@ -53,7 +42,10 @@ export class AwsPrBuildStack extends Stack {
         version: '0.2',
         phases: {
           build: {
-            commands: [
+            commands: [              
+              'echo ${CODEBUILD_SOURCE_VERSION}',
+              'BRANCH_NAME=${CODEBUILD_SOURCE_VERSION##*/}',
+              'echo ${BRANCH_NAME}',
               'ls -la'
             ]
           }
@@ -65,5 +57,5 @@ export class AwsPrBuildStack extends Stack {
     })
   }
 
-
-}
+  
+};
